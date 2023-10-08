@@ -4,7 +4,6 @@
 #include <QMainWindow>
 #include <QTimer>
 #include "Data.h"
-#include "../Lib/WinSerial.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }

@@ -1,0 +1,6 @@
+[submodule ".\\WinTerminal\\lib\\TComm"]
+	path = .\\WinTerminal\\lib\\TComm
+	url = https://github.com/SinkroniusMaximus/TComm.git
+[submodule ".\\WinQTWidgets\\lib\\TComm"]
+	path = .\\WinQTWidgets\\lib\\TComm
+	url = https://github.com/SinkroniusMaximus/TComm.git

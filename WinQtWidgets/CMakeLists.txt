@@ -15,7 +15,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 file(GLOB_RECURSE Headers ./*.h)
 file(GLOB_RECURSE Source ./*.cpp)
 file(GLOB_RECURSE Ui ./*.cpp)
-#file(GLOB_RECURSE Library ../Lib/*.h)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(WinQtWidgets

@@ -1,5 +1,4 @@
 #include "Data.h"
-#include "../Lib/WinSerial.h"
 
 Data dataSource;
 HardwareSerial Serial;

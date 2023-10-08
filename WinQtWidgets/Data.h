@@ -2,8 +2,7 @@
 #define DATA_H
 
 #define TCommWindows
-#include "../Lib/WinCommon.h"
-#include "../Lib/TemplateCommunicator/TComm.h"
+#include "lib/TComm/src/TComm.h"
 
 typedef TemplateCommunicator<int> Xint;
 typedef TemplateCommunicator<float> Xfloat;

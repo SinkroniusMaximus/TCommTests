@@ -1,7 +1,0 @@
-[
-{
-  "directory": "C:/Users/Rubio/Documents/PlatformIO/Projects/TCommTests/WinTerminal/build",
-  "command": "C:\\msys64\\mingw64\\bin\\g++.exe   -g -std=gnu++17 -o CMakeFiles\\TCommWinTerminal.dir\\Main.cpp.obj -c C:\\Users\\Rubio\\Documents\\PlatformIO\\Projects\\TCommTests\\WinTerminal\\Main.cpp",
-  "file": "C:/Users/Rubio/Documents/PlatformIO/Projects/TCommTests/WinTerminal/Main.cpp"
-}
-]

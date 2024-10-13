@@ -1,3 +1,0 @@
-"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\TCommWinTerminal.dir/objects.a
-C:\msys64\mingw64\bin\ar.exe qc CMakeFiles\TCommWinTerminal.dir/objects.a @CMakeFiles\TCommWinTerminal.dir\objects1
-C:\msys64\mingw64\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\TCommWinTerminal.dir/objects.a -Wl,--no-whole-archive -o TCommWinTerminal.exe -Wl,--out-implib,libTCommWinTerminal.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\TCommWinTerminal.dir\linkLibs.rsp

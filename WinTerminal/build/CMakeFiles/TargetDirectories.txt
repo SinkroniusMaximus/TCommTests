@@ -1,3 +1,0 @@
-C:/Users/Rubio/Documents/PlatformIO/Projects/TCommTests/WinTerminal/build/CMakeFiles/TCommWinTerminal.dir
-C:/Users/Rubio/Documents/PlatformIO/Projects/TCommTests/WinTerminal/build/CMakeFiles/edit_cache.dir
-C:/Users/Rubio/Documents/PlatformIO/Projects/TCommTests/WinTerminal/build/CMakeFiles/rebuild_cache.dir

@@ -12,5 +12,5 @@ file(GLOB Source ./*.cpp)
 
 # Add executable target with source files
 add_executable(TCommTest ${Source})
-target_link_libraries(GenericLib PRIVATE open62541pp::open62541pp)
-target_link_libraries(GenericLib PRIVATE ${SETUPAPI_LIB})
+target_link_libraries(TCommTest PRIVATE open62541pp::open62541pp)
+target_link_libraries(TCommTest PRIVATE ${SETUPAPI_LIB})

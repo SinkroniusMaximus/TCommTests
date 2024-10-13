@@ -1,0 +1,14 @@
+{
+	"backtraceGraph" : 
+	{
+		"commands" : [],
+		"files" : [],
+		"nodes" : []
+	},
+	"installers" : [],
+	"paths" : 
+	{
+		"build" : "lib/Communication/open62541pp/3rdparty/open62541/arch",
+		"source" : "lib/Communication/open62541pp/3rdparty/open62541/arch"
+	}
+}

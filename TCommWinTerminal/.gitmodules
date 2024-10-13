@@ -1,6 +1,0 @@
-[submodule "lib"]
-	path = lib
-	url = https://github.com/SinkroniusMaximus/TComm.git
-[submodule "lib/Communication/open62541pp"]
-	path = lib/Communication/open62541pp
-	url = https://github.com/open62541pp/open62541pp.git

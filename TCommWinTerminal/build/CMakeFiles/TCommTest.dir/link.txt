@@ -1,0 +1,3 @@
+"C:\Program Files\CMake\bin\cmake.exe" -E rm -f CMakeFiles\TCommTest.dir/objects.a
+C:\msys64\mingw64\bin\ar.exe qc CMakeFiles\TCommTest.dir/objects.a @CMakeFiles\TCommTest.dir\objects1
+C:\msys64\mingw64\bin\g++.exe -g -Wl,--whole-archive CMakeFiles\TCommTest.dir/objects.a -Wl,--no-whole-archive -o TCommTest.exe -Wl,--out-implib,libTCommTest.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\TCommTest.dir\linkLibs.rsp

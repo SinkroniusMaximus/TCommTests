@@ -3,7 +3,6 @@
 #include "lib\Communication\Media\ClientHandler.h"
 #include "lib\Communication\Media\WebSocketServer.h"
 #include "lib\Communication\Media\SerialInterface.h"
-#include "FileHandler\FileHandler.h"
 
 TCommServer server;
 opcua::Server uaserver;
@@ -20,7 +19,6 @@ int main()
     } else {
         std::cout << "Failed to start server" << std::endl;
     }
-    serialInterface.SetSerialDriver(Serial);
     uaserver.setApplicationName("TCommVerse");
     /// Set application URI, default: `urn:open62541.server.application`.
     uaserver.setApplicationUri("urn:TCommVerse.server.application");

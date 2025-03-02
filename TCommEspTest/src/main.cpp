@@ -7,16 +7,18 @@ TCommClient client;
 Entity root{nullptr,"root"};
 SerialSubscriber serialSub;
 WifiSocket wifiSocket;
-const char* ssid = "WifiNetwork";           // Replace with wifi network name
-const char* password = "WifiPassword";      // Replace with actual password
-const char* host = "ThisIsMyComputerName";  // Replace with your server 'computer name' to connect to
-const uint16_t port = 1234;
+// const char* ssid = "WifiNetwork";           // Replace with wifi network name
+// const char* password = "WifiPassword";      // Replace with actual password
+// const char* host = "ThisIsMyComputerName";  // Replace with your server 'computer name' to connect to
+// const uint16_t port = 1234;
 EquipmentModule equipmentModule{nullptr,"equipmentModule"};
+SerialAdapter serialAdapter(&Serial);
 
 void setup() {
-  Serial.begin(512000);//115200);
-  wifiSocket.Connect(ssid, password, host, port);
-  serialSub.Xinit(&wifiSocket);
+  Serial.begin(230400);//115200);
+  // wifiSocket.Connect(ssid, password, host, port);
+  // serialSub.Xinit(&wifiSocket);
+  serialSub.Xinit(&serialAdapter);
 }
 
 void loop() {

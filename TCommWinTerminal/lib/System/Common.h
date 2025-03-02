@@ -10,7 +10,7 @@
     #include "ClockBits.h"
     #include "Entity.h"
     #include "ResourceIndexManager.h"
-    #include "..\Communication\TComm\TComm.h"
+    #include "../Communication/TComm/TComm.h"
     #include "AbstractConnector.h"
     #include "BaseConnector.h"
     #include "Connector.h"

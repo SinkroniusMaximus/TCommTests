@@ -4,8 +4,6 @@
 namespace TComm
 {
 
-#include <HardwareSerial.h>
-
 class SerialAdapter : public StreamInterface {
 public:
     SerialAdapter(HardwareSerial* serial) : serial(serial) {}

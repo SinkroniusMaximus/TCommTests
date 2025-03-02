@@ -30,12 +30,29 @@
             #include <string>
             #include <map>
             #include <sstream>
+            #include <algorithm>
+            #include <queue>
         #elif defined(__linux__)
             #include <iostream>
             #include <dirent.h>
+            typedef unsigned char byte;
+            #include <sys/socket.h> 
+            #include <sys/ioctl.h>
+            #include <net/if.h>
+            #include <netinet/in.h>
             #include <fcntl.h>
             #include <unistd.h>
-            #include <termios.h>
+            // #include <termios.h>
+            #include <asm/ioctls.h>
+            #include <asm/termbits.h>
+            #include <functional>
+            #include <mutex>
+            #include <future>
+            #include <map>
+            #include <filesystem>
+            #include <regex>
+            #include <fstream>
+            #include <queue>
         #endif
         
         #include "../../../System/ClockBits.h"
@@ -51,7 +68,7 @@
                     Serial.println(formattedString);
                 }
             #endif
-            #if defined(_WIN32) || defined(_WIN64)
+            #if defined(_WIN32) || defined(_WIN64) || defined(__linux__)
                 typedef std::string String;
                  #define PRINT(formattedString)  \
                  std::cout << formattedString << std::endl;  \

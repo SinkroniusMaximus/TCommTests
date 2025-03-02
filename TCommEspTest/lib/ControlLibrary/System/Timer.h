@@ -1,10 +1,12 @@
 #ifndef TIMER_H
 #define TIMER_H
 
-#ifdef _WIN32
-#include <chrono>
+#if defined(_WIN32) || defined(_WIN64)
+    #include <chrono>
+#elif defined(__linux__)
+    #include <ctime>
 #else
-#include <Arduino.h>
+    #include <Arduino.h>
 #endif
 namespace GenericLibrary
 {
@@ -13,9 +15,12 @@ class Timer
 private:
     bool P_startTimer;
     long setTime; // Time duration in microseconds
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
     std::chrono::steady_clock::time_point startTime;
     std::chrono::steady_clock::time_point currentTime;
+#elif defined(__linux__)
+    struct timespec startTime;
+    struct timespec currentTime;
 #else
     long startTime;
     long currentTime;
@@ -69,13 +74,21 @@ public:
         int64_t elapsedTime;
         if (startTimer)
         {
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
             currentTime = std::chrono::steady_clock::now();
             if (!P_startTimer)
             {
                 startTime = currentTime;
             }
             elapsedTime = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime).count();
+#elif defined(__linux__)
+            clock_gettime(CLOCK_MONOTONIC, &currentTime);
+            if (!P_startTimer)
+            {
+                startTime = currentTime;
+            }
+            elapsedTime = (currentTime.tv_sec - startTime.tv_sec) * 1000000LL + // Seconds to microseconds
+                        (currentTime.tv_nsec - startTime.tv_nsec) / 1000LL;   // Nanoseconds to microseconds
 #else
             if (useMicros)
             {

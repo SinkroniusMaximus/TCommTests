@@ -44,8 +44,13 @@ private:
         if (changeReceived)
         {
             ;
-            // PRINT("change received");
+            // PRINT("change received " << (int)message.type);
         }
+        if(message.text4.IsChangeReceived())
+        {
+            // PRINT("other side type is " << message.text4->c_str());
+        }
+        message.text5 = std::to_string(message.type);
 
         switch (message.type)
         {
@@ -53,6 +58,7 @@ private:
             {
                 if (subjectIsBeingInterrogated)
                 {
+                    // PRINT("device list size " << subjectDeviceListSize);
                     if (interruptedSequence)
                     {
                         message.type = sequenceMessageType;
@@ -71,20 +77,20 @@ private:
                     }
                     else
                     {
-                        PRINT("choose between end or request all data -------");
+                        // PRINT("choose between end or request all data -------");
                         // PRINT(sequenceMessageType);
                         // PRINT(eRequestAllData);
                         if (!(sequenceMessageType == eRequestAllData))
                         {
                             message.type = eRequestAllData;
                             sequenceMessageType = message.type;
-                            PRINT("requesting all data");
+                            // PRINT("requesting all data");
                         }
                         else
                         {
                             message.type = eEndInterrogation;
                             subjectIsBeingInterrogated = false;
-                            PRINT("ending interrogation");
+                            // PRINT("ending interrogation");
                         }
                     }
                 }
@@ -118,14 +124,33 @@ private:
             case eRequestNameOfObject:
             case eRequestPathOfObject:
             case eRequestDataTypeOfObject:
+            break;
             case eRequestObject:
+            {
+                // PRINT("requesting object");
+                // responseTimeout.Run();
+                // responseTimeout.Start();
+                // if(responseTimeout.Done())
+                // {
+                //     PRINT("timeout requesting object");
+                //     responseTimeout.Stop();
+                //     message.type.SetChanged();
+                // }
+                break;
+            }
             case eRequestListSize:
             case eEndInterrogation:
             case ePleaseBePatient:
                 break;
-
+            default:
+            {
+                PRINT("wrong response");
+                message.type = eNone;
+                break;
+            }
             case eResponseObject:
             {
+                // PRINT("response object");
                 if (subjectIsBeingInterrogated)
                 {
                     DeviceData data = {message.text1->c_str(), message.text2->c_str(), message.text3->c_str()};
@@ -147,7 +172,7 @@ private:
             }
             case eResponseListSize:
             {
-                PRINT("response list size");
+                // PRINT("response list size");
                 // PRINT(message.value.Get());
                 subjectDeviceListSize = message.value;
                 message.type = eNone;
@@ -278,6 +303,7 @@ private:
         SetObjectPath(deviceIndex, objectIndex, path.c_str());
     }
 
+    Timer responseTimeout{1000};
     std::unordered_map<std::string, uint16_t> macIdToDeviceIndex;
     std::vector<DeviceData> tempDeviceData;
     MESSAGE message{"TComm"};
@@ -290,7 +316,7 @@ private:
     uint16_t subjectDeviceListSize = 0;
     uint16_t subjectObjectIndex = 0;
     bool interruptedSequence = false;
-    MESSAGETYPE sequenceMessageType;
+    uint32_t sequenceMessageType;
 };
 }
 #endif // TCOMMSERVER_H

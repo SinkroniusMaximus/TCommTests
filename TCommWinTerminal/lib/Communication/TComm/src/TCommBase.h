@@ -120,6 +120,10 @@ namespace TComm
                     std::string fullPath = path + "\\message\\";
                     type.SetPath(fullPath.c_str());
                     type.SetUpdateInterval(eOnChange);
+                    testtype.SetPath(fullPath.c_str());
+                    testtype.SetUpdateInterval(eOnChange);
+                    echotype.SetPath(fullPath.c_str());
+                    echotype.SetUpdateInterval(eOnChange);
                     value.SetPath(fullPath.c_str());
                     value.SetUpdateInterval(eOnChange);
                     text1.SetPath(fullPath.c_str());
@@ -139,7 +143,9 @@ namespace TComm
                 Xstring text3{"text3", 0};
                 Xstring text4{"text4", 0};
                 Xstring text5{"text5", 0};
-                TemplateCommunicationObject<MESSAGETYPE> type{"type", 0};
+                Xint32 type{"type", 0};
+                Xint32 testtype{"testtype", 0};
+                Xint32 echotype{"echotype", 0};
             };
 
     };

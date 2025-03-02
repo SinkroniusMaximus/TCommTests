@@ -1,165 +1,28 @@
-// #ifndef WEBSOCKETSERVER_H
-// #define WEBSOCKETSERVER_H
-
-// #include <winsock2.h>
-// #include <ws2tcpip.h>
-// #include <vector>
-// #include <iostream>
-
-// // Link with ws2_32.lib
-// #pragma comment (lib, "Ws2_32.lib")
-
-// #define DEFAULT_PORT "1234"
-// using namespace TComm;
-// class WebSocketServer {
-// public:
-//     WebSocketServer() : ListenSocket(INVALID_SOCKET) {
-//         ZeroMemory(&hints, sizeof(hints));
-//         hints.ai_family = AF_INET;
-//         hints.ai_socktype = SOCK_STREAM;
-//         hints.ai_protocol = IPPROTO_TCP;
-//         hints.ai_flags = AI_PASSIVE;
-//     }
-
-//     bool begin() {
-//         int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-//         if (iResult != 0) {
-//             std::cerr << "WSAStartup failed with error: " << iResult << std::endl;
-//             return false;
-//         }
-
-//         iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-//         if (iResult != 0) {
-//             std::cerr << "getaddrinfo failed with error: " << iResult << std::endl;
-//             WSACleanup();
-//             return false;
-//         }
-
-//         ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
-//         if (ListenSocket == INVALID_SOCKET) {
-//             std::cerr << "Socket creation failed with error: " << WSAGetLastError() << std::endl;
-//             freeaddrinfo(result);
-//             WSACleanup();
-//             return false;
-//         }
-
-//         iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-//         if (iResult == SOCKET_ERROR) {
-//             std::cerr << "Bind failed with error: " << WSAGetLastError() << std::endl;
-//             freeaddrinfo(result);
-//             closesocket(ListenSocket);
-//             WSACleanup();
-//             return false;
-//         }
-
-//         freeaddrinfo(result);
-
-//         iResult = listen(ListenSocket, SOMAXCONN);
-//         if (iResult == SOCKET_ERROR) {
-//             std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
-//             closesocket(ListenSocket);
-//             WSACleanup();
-//             return false;
-//         }
-
-//         return true;
-//     }
-
-//     void handleClients() {
-//         // Accept new client connections
-//         fd_set readfds;
-//         FD_ZERO(&readfds);
-//         FD_SET(ListenSocket, &readfds);
-//         timeval timeout = { 0, 0 }; // non-blocking
-
-//         int iResult = select(0, &readfds, NULL, NULL, &timeout);
-//         if (iResult == SOCKET_ERROR) {
-//             std::cerr << "Select failed with error: " << WSAGetLastError() << std::endl;
-//             return;
-//         }
-
-//         if (FD_ISSET(ListenSocket, &readfds)) {
-//             SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
-//             if (ClientSocket == INVALID_SOCKET) {
-//                 std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
-//             } else {
-//                 int flag = 1;
-//                 setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
-//                 int bufferSize = 65536; // or any size that you find appropriate
-//                 setsockopt(ClientSocket, SOL_SOCKET, SO_RCVBUF, (char *)&bufferSize, sizeof(bufferSize));
-//                 setsockopt(ClientSocket, SOL_SOCKET, SO_SNDBUF, (char *)&bufferSize, sizeof(bufferSize));
-//                 u_long mode = 1;
-//                 ioctlsocket(ClientSocket, FIONBIO, &mode);
-//                 ClientHandler* handler = new ClientHandler(ClientSocket);
-//                 clientHandlers.push_back(handler);
-
-//                 // Create and initialize a SerialSubscriber for this client
-//                 TComm::SerialSubscriber* subscriber = new TComm::SerialSubscriber();
-//                 subscriber->Xinit(handler);
-//                 subscribers.push_back(subscriber);
-//             }
-//         }
-//     }
-
-//     void Run()
-//     {
-//         handleClients();
-//     }
-
-//     void close() {
-//         for (ClientHandler* handler : clientHandlers) {
-//             handler->Close();
-//             delete handler;
-//         }
-//         clientHandlers.clear();
-
-//         for (TComm::SerialSubscriber* subscriber : subscribers) {
-//             delete subscriber;
-//         }
-//         subscribers.clear();
-
-//         if (ListenSocket != INVALID_SOCKET) {
-//             closesocket(ListenSocket);
-//             ListenSocket = INVALID_SOCKET;
-//         }
-
-//         WSACleanup();
-//     }
-
-//     ~WebSocketServer() {
-//         close();
-//     }
-
-// private:
-//     WSADATA wsaData;
-//     SOCKET ListenSocket;
-//     std::vector<ClientHandler*> clientHandlers;
-//     std::vector<TComm::SerialSubscriber*> subscribers;
-//     struct addrinfo* result;
-//     struct addrinfo hints;
-// };
-
-// #endif // WEBSOCKETSERVER_H
-
 #ifndef WEBSOCKETSERVER_H
 #define WEBSOCKETSERVER_H
 
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#include <vector>
-#include <iostream>
-#include <algorithm> // Include for std::remove_if
-
-// Link with ws2_32.lib
-#pragma comment (lib, "Ws2_32.lib")
+#if defined(_WIN32) || defined(_WIN64)
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    #pragma comment (lib, "Ws2_32.lib")
+    #define CLOSE_SOCKET closesocket
+    #define GET_LAST_ERROR WSAGetLastError()
+#elif defined(__linux__)
+    #define INVALID_SOCKET -1
+    #define SOCKET_ERROR -1
+    #define SOCKET int
+    #define CLOSE_SOCKET ::close
+    #define GET_LAST_ERROR errno
+#endif
 
 #define DEFAULT_PORT "1234"
+
 using namespace TComm;
 
 class WebSocketServer {
 public:
     WebSocketServer() : ListenSocket(INVALID_SOCKET) {
-        ZeroMemory(&hints, sizeof(hints));
+        memset(&hints, 0, sizeof(hints));
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
         hints.ai_protocol = IPPROTO_TCP;
@@ -167,43 +30,35 @@ public:
     }
 
     bool begin() {
-        int iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
-        if (iResult != 0) {
-            std::cerr << "WSAStartup failed with error: " << iResult << std::endl;
-            return false;
-        }
+        #if defined(_WIN32) || defined(_WIN64)
+            if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+                std::cerr << "WSAStartup failed\n";
+                return false;
+            }
+        #endif
 
-        iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);
-        if (iResult != 0) {
-            std::cerr << "getaddrinfo failed with error: " << iResult << std::endl;
-            WSACleanup();
+        if (getaddrinfo(nullptr, DEFAULT_PORT, &hints, &result) != 0) {
+            std::cerr << "getaddrinfo failed\n";
+            cleanup();
             return false;
         }
 
         ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
         if (ListenSocket == INVALID_SOCKET) {
-            std::cerr << "Socket creation failed with error: " << WSAGetLastError() << std::endl;
-            freeaddrinfo(result);
-            WSACleanup();
+            std::cerr << "Socket creation failed\n";
+            cleanup();
             return false;
         }
 
-        iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-        if (iResult == SOCKET_ERROR) {
-            std::cerr << "Bind failed with error: " << WSAGetLastError() << std::endl;
-            freeaddrinfo(result);
-            closesocket(ListenSocket);
-            WSACleanup();
+        if (bind(ListenSocket, result->ai_addr, result->ai_addrlen) == SOCKET_ERROR) {
+            std::cerr << "Bind failed\n";
+            cleanup();
             return false;
         }
 
-        freeaddrinfo(result);
-
-        iResult = listen(ListenSocket, SOMAXCONN);
-        if (iResult == SOCKET_ERROR) {
-            std::cerr << "Listen failed with error: " << WSAGetLastError() << std::endl;
-            closesocket(ListenSocket);
-            WSACleanup();
+        if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+            std::cerr << "Listen failed\n";
+            cleanup();
             return false;
         }
 
@@ -211,37 +66,26 @@ public:
     }
 
     void handleClients() {
-        // Accept new client connections
         fd_set readfds;
         FD_ZERO(&readfds);
         FD_SET(ListenSocket, &readfds);
-        timeval timeout = { 0, 0 }; // non-blocking
+        timeval timeout = { 0, 0 };
 
-        int iResult = select(0, &readfds, NULL, NULL, &timeout);
-        if (iResult == SOCKET_ERROR) {
-            std::cerr << "Select failed with error: " << WSAGetLastError() << std::endl;
-            return;
-        }
+        int nfds = ListenSocket + 1; // For Linux compatibility
+        if (select(nfds, &readfds, nullptr, nullptr, &timeout) > 0) {
+            if (FD_ISSET(ListenSocket, &readfds)) {
+                SOCKET ClientSocket = accept(ListenSocket, nullptr, nullptr);
+                if (ClientSocket != INVALID_SOCKET) {
+                    setNonBlocking(ClientSocket);
+                    auto* handler = new ClientHandler(ClientSocket, [this](ClientHandler* h) { RemoveClient(h); });
+                    clientHandlers.push_back(handler);
 
-        if (FD_ISSET(ListenSocket, &readfds)) {
-            SOCKET ClientSocket = accept(ListenSocket, NULL, NULL);
-            if (ClientSocket == INVALID_SOCKET) {
-                std::cerr << "Accept failed with error: " << WSAGetLastError() << std::endl;
-            } else {
-                int flag = 1;
-                setsockopt(ClientSocket, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
-                int bufferSize = 65536; // or any size that you find appropriate
-                setsockopt(ClientSocket, SOL_SOCKET, SO_RCVBUF, (char *)&bufferSize, sizeof(bufferSize));
-                setsockopt(ClientSocket, SOL_SOCKET, SO_SNDBUF, (char *)&bufferSize, sizeof(bufferSize));
-                u_long mode = 1;
-                ioctlsocket(ClientSocket, FIONBIO, &mode);
-                ClientHandler* handler = new ClientHandler(ClientSocket, [this](ClientHandler* h) { this->RemoveClient(h); });
-                clientHandlers.push_back(handler);
-
-                // Create and initialize a SerialSubscriber for this client
-                TComm::SerialSubscriber* subscriber = new TComm::SerialSubscriber();
-                subscriber->Xinit(handler);
-                subscribers.push_back(subscriber);
+                    auto* subscriber = new TComm::SerialSubscriber();
+                    subscriber->Xinit(handler);
+                    subscribers.push_back(subscriber);
+                } else {
+                    std::cerr << "Accept failed\n";
+                }
             }
         }
     }
@@ -253,23 +97,25 @@ public:
     }
 
     void Close() {
-        for (ClientHandler* handler : clientHandlers) {
+        for (auto* handler : clientHandlers) {
             handler->Close();
             delete handler;
         }
         clientHandlers.clear();
 
-        for (TComm::SerialSubscriber* subscriber : subscribers) {
+        for (auto* subscriber : subscribers) {
             delete subscriber;
         }
         subscribers.clear();
 
         if (ListenSocket != INVALID_SOCKET) {
-            closesocket(ListenSocket);
+            CLOSE_SOCKET(ListenSocket);
             ListenSocket = INVALID_SOCKET;
         }
 
-        WSACleanup();
+        #if defined(_WIN32) || defined(_WIN64)
+            WSACleanup();
+        #endif
     }
 
     ~WebSocketServer() {
@@ -277,12 +123,25 @@ public:
     }
 
 private:
-    WSADATA wsaData;
+    #if defined(_WIN32) || defined(_WIN64)
+        WSADATA wsaData;
+    #endif
     SOCKET ListenSocket;
+    struct addrinfo* result = nullptr;
+    struct addrinfo hints;
+
     std::vector<ClientHandler*> clientHandlers;
     std::vector<TComm::SerialSubscriber*> subscribers;
-    struct addrinfo* result;
-    struct addrinfo hints;
+
+    void setNonBlocking(SOCKET socket) {
+        #if defined(_WIN32) || defined(_WIN64)
+            u_long mode = 1;
+            ioctlsocket(socket, FIONBIO, &mode);
+        #elif defined(__linux__)
+            int flags = fcntl(socket, F_GETFL, 0);
+            fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+        #endif
+    }
 
     // Function to remove a client handler and its corresponding subscriber
     void RemoveClient(ClientHandler* handler) {
@@ -330,6 +189,19 @@ private:
                                return false;
                            }),
             clientHandlers.end());
+    }
+
+    void cleanup() {
+        if (result) {
+            freeaddrinfo(result);
+            result = nullptr;
+        }
+        if (ListenSocket != INVALID_SOCKET) {
+            CLOSE_SOCKET(ListenSocket);
+        }
+        #if defined(_WIN32) || defined(_WIN64)
+            WSACleanup();
+        #endif
     }
 };
 

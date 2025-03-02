@@ -1,6 +1,6 @@
 #ifndef SERIALINTERFACE_H
 #define SERIALINTERFACE_H
-
+// for windows
 using namespace TComm;
 
 struct SerialDeviceInfo 
@@ -50,7 +50,7 @@ public:
             HardwareSerial* serialDevice = new HardwareSerial();
             SerialSubscriber* subscriber = new SerialSubscriber();
             subscriber->Xinit(serialDevice);
-            serialDevice->begin(*selectedDeviceName, 512000);
+            serialDevice->begin(*selectedDeviceName, 230400);
             serialDevices.push_back(serialDevice);
             subscribers.push_back(subscriber);
             configuration.connect = false;
@@ -81,6 +81,7 @@ private:
     } INSTENTITY(data);
 
     void checkAndAddDevice(const SerialDeviceInfo& device, std::vector<SerialDeviceInfo>& devices) {
+        #if defined(_WIN32) || defined(_WIN64)
         HANDLE hSerial = CreateFileA(
             device.portName.c_str(),
             GENERIC_READ | GENERIC_WRITE,
@@ -97,10 +98,26 @@ private:
         } else {
             std::cerr << "Unable to open serial port: " << device.portName << std::endl;
         }
+        #elif defined(__linux__)
+        int fd = open(device.portName.c_str(), O_RDWR | O_NOCTTY | O_NDELAY);
+        if (fd != -1) 
+        {
+            PRINT("success opening " << device.portName);
+            // Successfully opened, now close and add the device
+            close(fd);
+            std::lock_guard<std::mutex> lock(devicesMutex);
+            devices.push_back(device);
+        }
+        else
+        {
+            PRINT("failed to open " << device.portName);
+        }
+        #endif
     }
     std::vector<SerialDeviceInfo> listAvailableSerialDevices() {
         std::vector<SerialDeviceInfo> devices;
         std::vector<std::future<void>> futures;
+    #if defined(_WIN32) || defined(_WIN64)
         const char* keys[] = {"SYSTEM\\CurrentControlSet\\Enum\\USB", "SYSTEM\\CurrentControlSet\\Enum\\BTHENUM"};
 
         for (const char* baseKey : keys) {
@@ -162,7 +179,36 @@ private:
         for (auto& future : futures) {
             future.get();
         }
+         #elif defined(__linux__)
+        // Serial ports on Linux are typically named /dev/ttyS*, /dev/ttyUSB*, /dev/ttyACM*
+        const std::vector<std::string> patterns = {"ttyS", "ttyUSB", "ttyACM", "ttyCH341USB"};
 
+        for (const auto& entry : fs::directory_iterator("/dev")) 
+        {
+            std::string path = entry.path().string();
+            for (const auto& pattern : patterns) 
+            {
+                if (path.find(pattern) != std::string::npos) 
+                {
+                    // Check the port asynchronously
+                    futures.push_back(std::async(std::launch::async, [this, path, &devices]() {
+                        SerialDeviceInfo device;
+                        device.portName = path;
+                        getDeviceInfo(device);
+                        // std::cout << "Port Name: " << device.portName << std::endl;
+                        // std::cout << "Friendly Name: " << device.friendlyName << std::endl;
+                        checkAndAddDevice(device, devices);
+                    }));
+                }
+            }
+        }
+
+        // Wait for all tasks to complete
+        for (auto& future : futures) 
+        {
+            future.get();
+        }
+        #endif
         return devices;
     }
 
@@ -182,7 +228,8 @@ private:
             std::cout << std::endl;
         }
     }
-    
+  
+    #if defined(_WIN32) || defined(_WIN64)  
     bool getPortName(HKEY hKey, std::string& portName) 
     {
         HKEY hDeviceParametersKey;
@@ -248,6 +295,62 @@ private:
             device.locationInformation = buffer;
         }
     }
+    #elif defined(__linux__)
+    void getDeviceInfo(SerialDeviceInfo& device) {
+        // Resolve the path to the tty device in /sys/class/tty
+        std::string devicePath = std::filesystem::canonical("/sys/class/tty/" + device.portName.substr(device.portName.find_last_of("/") + 1) + "/device").string();
+        // Traverse up the directory tree to find the USB device
+        while (!std::filesystem::exists(devicePath + "/idVendor") && devicePath != "/") {
+            devicePath = std::filesystem::path(devicePath).parent_path().string();
+        }
+
+        if (std::filesystem::exists(devicePath + "/idVendor")) {
+            // Read VID, PID, and product name
+            std::ifstream vidFile(devicePath + "/idVendor");
+            std::ifstream pidFile(devicePath + "/idProduct");
+            std::ifstream productFile(devicePath + "/product");
+
+            if (vidFile.is_open()) std::getline(vidFile, device.vid);
+            if (pidFile.is_open()) std::getline(pidFile, device.pid);
+            if (productFile.is_open()) std::getline(productFile, device.friendlyName);
+
+            // Extract location info (e.g., "1-2") from the path
+            std::regex locationRegex(".*usb[0-9]+/([0-9\-]+)");
+            std::smatch match;
+            if (std::regex_search(devicePath, match, locationRegex) && match.size() > 1) {
+                device.locationInformation = match[1];
+            }
+
+            // Serial number (optional, may not exist)
+            std::ifstream serialFile(devicePath + "/serial");
+            if (serialFile.is_open()) std::getline(serialFile, device.serialNumber);
+        } else {
+            // when lesser info is found, we try to make a friendly name
+            std::string deviceName = device.portName.substr(device.portName.find_last_of("/") + 1);
+            // std::regex typeAndNumberRegex("tty([A-Za-z]+)([0-9]+)");
+            std::regex typeAndNumberRegex("tty([A-Za-z]+(?:[0-9]*[A-Za-z]+)*)([0-9]+)");
+            std::smatch match;
+            if (std::regex_match(deviceName, match, typeAndNumberRegex) && match.size() > 2) {
+                std::string extractedType = match[1];
+                std::string extractedNumber = match[2];
+
+                if (extractedType == "S") {
+                    device.friendlyName = "Serial Port " + extractedNumber;
+                } else if (extractedType == "USB") {
+                    device.friendlyName = "USB Serial Port Adapter " + extractedNumber;
+                } else if (extractedType == "CH341USB") {
+                    device.friendlyName = "USB Serial Port Adapter " + extractedNumber;
+                } else if (extractedType == "ACM") {
+                    device.friendlyName = "Abstract Communication Model Device " + extractedNumber;
+                } else {
+                    device.friendlyName = "Unknown Device Type (" + extractedType + ") " + extractedNumber;
+                }
+            } else {
+                device.friendlyName = "Unknown Device";
+            }
+        }
+    }
+    #endif
 };
 
 #endif // SERIALINTERFACE_H

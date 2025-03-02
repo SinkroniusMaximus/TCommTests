@@ -174,7 +174,7 @@ static class Communicator// Communicator
                 if(deviceChanged.second)
                 {
                     PRINT("device changed, registring..");
-                    PRINT(deviceChanged.first);
+                    // PRINT(deviceChanged.first);
                     RegisterDevice(deviceChanged.first);
                     deviceChanged.second = false;
                 }

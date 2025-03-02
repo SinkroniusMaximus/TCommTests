@@ -4,102 +4,118 @@
 
 namespace TComm
 {
-    class HardwareSerial
+    class HardwareSerial : public StreamInterface
     {
     public:
         HardwareSerial() : serialHandle(-1) {}
         ~HardwareSerial()
         {
-            if (serialHandle != -1) close(serialHandle);
+            if (serialHandle != -1) ::close(serialHandle);
         }
 
         void begin(const std::string& comPort, unsigned long baudrate)
         {
+            // PRINT("Opening serial port " << comPort);
             if (serialHandle != -1) close(serialHandle);
-
+            
             serialHandle = open(comPort.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
             if (serialHandle < 0)
             {
                 std::cerr << "Error opening " << comPort << ": " << strerror(errno) << std::endl;
                 return;
             }
-
-            struct termios tty;
-            if (tcgetattr(serialHandle, &tty) != 0)
-            {
-                std::cerr << "Error from tcgetattr: " << strerror(errno) << std::endl;
+            
+            // Use termios2 for custom baud rates
+            struct termios2 tty;
+            if (ioctl(serialHandle, TCGETS2, &tty) != 0) {
+                std::cerr << "Error from TCGETS2: " << strerror(errno) << std::endl;
                 return;
             }
 
-            cfsetospeed(&tty, baudrate);
-            cfsetispeed(&tty, baudrate);
+            tty.c_iflag &= ~IGNBRK;                     // Ignore break condition
+            tty.c_iflag &= ~(INLCR | ICRNL);            // Disable CR -> LF and NL -> CR conversion
+            // tty.c_lflag = 0;                            // No signaling chars, no echo, no canonical processing
+            // tty.c_oflag = 0;                            // No remapping, no delays
+            tty.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG);  // Raw input
+            tty.c_oflag &= ~OPOST;                      // Disable post-processing
+            tty.c_cc[VMIN] = 1;                         // Read at least 1 character
+            tty.c_cc[VTIME] = 5;                        // Timeout (0.5 seconds)
 
-            tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;
-            tty.c_iflag &= ~IGNBRK;
-            tty.c_lflag = 0;
-            tty.c_oflag = 0;
-            tty.c_cc[VMIN] = 1;
-            tty.c_cc[VTIME] = 5;
-            tty.c_iflag &= ~(IXON | IXOFF | IXANY);
-            tty.c_cflag |= (CLOCAL | CREAD);
-            tty.c_cflag &= ~(PARENB | PARODD);
-            tty.c_cflag |= 0;
-            tty.c_cflag &= ~CSTOPB;
-            tty.c_cflag &= ~CRTSCTS;
+            tty.c_iflag &= ~(IXON | IXOFF | IXANY);     // No software flow control
+            tty.c_cflag |= (CLOCAL | CREAD);            // Enable receiver, set local mode
+            tty.c_cflag &= ~CSIZE;
+            tty.c_cflag |= CS8;                         // 8 data bits
+            tty.c_cflag &= ~(PARENB | PARODD);          // No parity
+            tty.c_cflag &= ~CSTOPB;                     // 1 stop bit
+            tty.c_cflag &= ~CRTSCTS;                    // No hardware flow control
 
-            if (tcsetattr(serialHandle, TCSANOW, &tty) != 0)
-            {
-                std::cerr << "Error from tcsetattr: " << strerror(errno) << std::endl;
+            // Set custom baud rate
+            tty.c_cflag &= ~CBAUD;                      // Clear baud rate bits
+            tty.c_cflag |= CBAUDEX;                     // Enable custom baud rate
+            tty.c_ispeed = baudrate;                    // Set input speed
+            tty.c_ospeed = baudrate;                    // Set output speed
+
+            if (ioctl(serialHandle, TCSETS2, &tty) != 0) {
+                std::cerr << "Error from TCSETS2: " << strerror(errno) << std::endl;
+            } else {
+                std::cout << "Serial port configured with custom baud rate: " << baudrate << std::endl;
             }
+            PRINT("Opened serial port " << comPort);
         }
 
-        char read()
-        {
-            char buf;
-            int n = ::read(serialHandle, &buf, 1);
-            return (n > 0) ? buf : -1;
+
+        int read() override {
+            if (!readBuffer.empty()) {
+                int byte = readBuffer.front();
+                readBuffer.pop();
+                char readchar = (char)byte;
+                std::cout << readchar;
+                std::cout.flush();
+                return byte;
+            }
+
+            if (available() > 0) {
+                char recvbuf[512];
+                int iResult = ::read(serialHandle, recvbuf, sizeof(recvbuf));
+                if (iResult > 0) {
+                    for (int i = 0; i < iResult; ++i) {
+                        readBuffer.push(recvbuf[i]);
+                    }
+                    int byte = readBuffer.front();
+                    readBuffer.pop();
+                    return byte;
+                } else if (iResult == 0) {
+                    std::cout << "Connection closing...\n";
+                    Close();
+                } else {
+                    std::cerr << "Recv failed with error: " << iResult << std::endl;
+                    Close();
+                }
+            }
+            return -1;  // No data available or error
         }
 
-        bool write(const uint8_t* buffer, int size)
+        size_t write(const uint8_t* buffer, size_t size)
         {
-            int written = ::write(serialHandle, buffer, size);
-            return written == size;
+            size_t written = ::write(serialHandle, buffer, size);
+            return written;
         }
 
         int available()
         {
             int nbytes;
             ioctl(serialHandle, FIONREAD, &nbytes);
-            return nbytes;
+            return static_cast<int>(nbytes + readBuffer.size());
         }
 
-        std::vector<std::string> listAvailablePorts()
+        void Close()
         {
-            std::vector<std::string> ports;
-            struct dirent* entry;
-            DIR* dp = opendir("/dev");
-
-            if (dp == nullptr)
-            {
-                std::cerr << "Error opening /dev directory: " << strerror(errno) << std::endl;
-                return ports;
-            }
-
-            while ((entry = readdir(dp)))
-            {
-                std::string name = entry->d_name;
-                if (name.find("ttyS") == 0 || name.find("ttyUSB") == 0)
-                {
-                    ports.push_back("/dev/" + name);
-                }
-            }
-
-            closedir(dp);
-            return ports;
+            if (serialHandle != -1) close(serialHandle);
         }
 
     private:
         int serialHandle;
+        std::queue<char> readBuffer;
     };
 }
 
